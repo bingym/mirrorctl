@@ -22,9 +22,13 @@ See the TODO section in `README.md` for details. Brief status:
 - ✅ github subcommand: `convert` / `download` / `clone`
 - ✅ docker subcommand: `convert` / `pull`
 - ✅ ubuntu subcommand: `config` / `set <name>` / `list` / `unset`
-- ✅ debian subcommand: `config` / `set <name>` / `list` / `unset`
+- ✅ debian subcommand: `config` / `set <name>` / `list` / `unset` / `test`
+- ✅ npm subcommand: `config` / `set <name>` / `list` / `unset` / `test`
+- ✅ yarn subcommand: `config` / `set <name>` / `list` / `unset` / `test`
+- ✅ pnpm subcommand: `config` / `set <name>` / `list` / `unset` / `test`
+- ✅ uv subcommand: `config` / `set <name>` / `list` / `unset` / `test`
 - ✅ Unit tests (Go standard `testing` package)
-- 🔜 Next: npm / homebrew
+- 🔜 Next: homebrew
 - ❌ Not yet implemented: gem / cargo / go types
 
 ## Directory Structure
@@ -54,9 +58,17 @@ mirrorctl/
     ├── apt/
     │   └── apt.go       # Shared Debian/Ubuntu apt source management: distro detection, format detection (DEB822 vs traditional), domain replacement, backup/restore.
     ├── ubuntu/
-    │   └── ubuntu.go    # ubuntu subcommand implementation (config/set/list/unset)
-    └── debian/
-        └── debian.go    # debian subcommand implementation (config/set/list/unset)
+    │   └── ubuntu.go    # ubuntu subcommand implementation (config/set/list/unset/test)
+    ├── debian/
+    │   └── debian.go    # debian subcommand implementation (config/set/list/unset/test)
+    ├── npm/
+    │   └── npm.go       # npm subcommand implementation (config/set/list/unset/test)
+    ├── yarn/
+    │   └── yarn.go      # yarn subcommand implementation (config/set/list/unset/test)
+    ├── pnpm/
+    │   └── pnpm.go      # pnpm subcommand implementation (config/set/list/unset/test)
+    └── uv/
+        └── uv.go        # uv subcommand implementation (config/set/list/unset/test)
 ```
 
 ### File Responsibilities
@@ -66,11 +78,16 @@ mirrorctl/
 | `main.go`              | `main()` entry point; defines the cobra root command and registers type subcommands via `rootCmd.AddCommand()`. Only dispatches, no concrete logic. |
 | `internal/util/util.go`| Common utilities: `Die()` for fatal errors, `ExpandHome()` for `~` expansion, `ReadFile()` / `WriteFileAtomic()` and other general-purpose functions. |
 | `internal/pypi/pypi.go`| Implements pypi subcommand (config / set / list / unset / test). Maintains `Mirrors` slice, knows pip config file paths. Exposes `Command() *cobra.Command`. |
+| `internal/goproxy/goproxy.go`| Implements goproxy subcommand (config / set / list / unset / test). Manages GOPROXY via `go env -w`. |
 | `internal/github/github.go`| Implements github subcommand (convert / download / clone). Uses gh-proxy.com for GitHub URL acceleration. |
 | `internal/docker/docker.go`| Implements docker subcommand (convert / pull). Uses gh-proxy.org/docker for image pull acceleration. |
 | `internal/apt/apt.go`| Shared Debian/Ubuntu apt source management: distro detection, format detection (DEB822 vs traditional), domain replacement, backup/restore. |
 | `internal/ubuntu/ubuntu.go`| Implements ubuntu subcommand (config / set / list / unset). Uses apt package for source management. |
 | `internal/debian/debian.go`| Implements debian subcommand (config / set / list / unset). Uses apt package for source management. |
+| `internal/npm/npm.go`| Implements npm subcommand (config / set / list / unset / test). Manages ~/.npmrc registry. |
+| `internal/yarn/yarn.go`| Implements yarn subcommand (config / set / list / unset / test). Manages ~/.yarnrc.yml. |
+| `internal/pnpm/pnpm.go`| Implements pnpm subcommand (config / set / list / unset / test). Uses `pnpm config` command. |
+| `internal/uv/uv.go`| Implements uv subcommand (config / set / list / unset / test). Manages ~/.config/uv/uv.toml. |
 
 ## Design Conventions
 

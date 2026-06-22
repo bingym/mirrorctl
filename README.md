@@ -27,9 +27,15 @@ mirrorctl ubuntu set tuna              # Switch Ubuntu to Tsinghua TUNA mirror
 mirrorctl ubuntu list                  # List available Ubuntu mirrors
 mirrorctl debian config                # Show current Debian APT mirror
 mirrorctl debian set ustc              # Switch Debian to USTC mirror
+
+mirrorctl npm config                   # Show current npm registry
+mirrorctl npm set npmmirror            # Switch npm to npmmirror (Taobao)
+mirrorctl yarn set npmmirror           # Switch Yarn (Berry) to npmmirror
+mirrorctl pnpm set npmmirror           # Switch pnpm to npmmirror
+mirrorctl uv set tuna                  # Switch uv to TUNA PyPI mirror
 ```
 
-Planned support for `npm`, `homebrew`, `gem`, `cargo`, and more.
+Planned support for `homebrew`, `gem`, `cargo`, and more.
 
 ### docker
 
@@ -136,6 +142,27 @@ Replaces `archive.ubuntu.com` and `security.ubuntu.com` with the mirror hostname
 
 Replaces `deb.debian.org` with the mirror hostname in `/etc/apt/sources.list` or `/etc/apt/sources.list.d/debian.sources` (auto-detects DEB822 vs traditional format). Requires root.
 
+### npm / yarn / pnpm
+
+| name     | Maintainer                          | registry URL                                     |
+|----------|-------------------------------------|--------------------------------------------------|
+| npmmirror| npmmirror (formerly Taobao)          | https://registry.npmmirror.com/                  |
+| tuna     | Tsinghua University TUNA            | https://mirrors.tuna.tsinghua.edu.cn/npm/        |
+| huawei   | Huawei Cloud                        | https://repo.huaweicloud.com/repository/npm/     |
+| tencent  | Tencent Cloud                       | https://mirrors.tencent.com/npm/                 |
+
+npm writes `registry=<url>` to `~/.npmrc`. yarn writes `npmRegistryServer: "<url>"` to `~/.yarnrc.yml`. pnpm uses `pnpm config set registry <url>`.
+
+### uv
+
+| name   | Maintainer                          | index URL                                       |
+|--------|-------------------------------------|-------------------------------------------------|
+| tuna   | Tsinghua University TUNA            | https://pypi.tuna.tsinghua.edu.cn/simple/       |
+| aliyun | Alibaba Cloud                       | https://mirrors.aliyun.com/pypi/simple/         |
+| ustc   | USTC                                | https://pypi.mirrors.ustc.edu.cn/simple/        |
+
+Writes `[[index]]` section with `url` to `~/.config/uv/uv.toml`.
+
 ## Project Structure
 
 ```
@@ -163,8 +190,16 @@ mirrorctl/
 │   │   └── apt.go          # Shared Debian/Ubuntu apt source management
 │   ├── ubuntu/
 │   │   └── ubuntu.go       # ubuntu subcommand implementation (config/set/list/unset)
-│   └── debian/
-│       └── debian.go       # debian subcommand implementation (config/set/list/unset)
+│   ├── debian/
+│   │   └── debian.go       # debian subcommand implementation (config/set/list/unset)
+│   ├── npm/
+│   │   └── npm.go          # npm subcommand implementation (config/set/list/unset/test)
+│   ├── yarn/
+│   │   └── yarn.go         # yarn subcommand implementation (config/set/list/unset/test)
+│   ├── pnpm/
+│   │   └── pnpm.go         # pnpm subcommand implementation (config/set/list/unset/test)
+│   └── uv/
+│       └── uv.go           # uv subcommand implementation (config/set/list/unset/test)
 └── docs/
 ```
 
@@ -181,6 +216,10 @@ mirrorctl/
 - [x] Docker image proxy accelerator (convert / pull)
 - [x] Ubuntu APT mirror support (config / set / list / unset)
 - [x] Debian APT mirror support (config / set / list / unset)
+- [x] npm registry mirror support (config / set / list / unset / test)
+- [x] yarn registry mirror support (config / set / list / unset / test)
+- [x] pnpm registry mirror support (config / set / list / unset / test)
+- [x] uv index mirror support (config / set / list / unset / test)
 
 ### Features
 
@@ -221,8 +260,36 @@ mirrorctl/
 - [x] `debian list` — List all supported Debian mirrors
 - [x] `debian unset` — Restore from backup
 
+### npm
+- [x] `npm config` — Show current npm registry configuration
+- [x] `npm set <name>` — Set npm registry via ~/.npmrc
+- [x] `npm list` — List all supported npm mirrors
+- [x] `npm unset` — Restore from backup
+- [x] `npm test` — Test connectivity and latency of all npm mirrors
+
+### yarn
+- [x] `yarn config` — Show current Yarn registry configuration
+- [x] `yarn set <name>` — Set Yarn registry via ~/.yarnrc.yml
+- [x] `yarn list` — List all supported Yarn mirrors
+- [x] `yarn unset` — Restore from backup
+- [x] `yarn test` — Test connectivity and latency of all Yarn mirrors
+
+### pnpm
+- [x] `pnpm config` — Show current pnpm registry configuration
+- [x] `pnpm set <name>` — Set pnpm registry via `pnpm config set`
+- [x] `pnpm list` — List all supported pnpm mirrors
+- [x] `pnpm unset` — Restore default via `pnpm config delete`
+- [x] `pnpm test` — Test connectivity and latency of all pnpm mirrors
+
+### uv
+- [x] `uv config` — Show current uv index configuration
+- [x] `uv set <name>` — Set uv index via ~/.config/uv/uv.toml
+- [x] `uv list` — List all supported uv mirrors
+- [x] `uv unset` — Restore from backup
+- [x] `uv test` — Test connectivity and latency of all uv mirrors
+
 ### Other types (planned)
-- [ ] `npm set <name>` — Write `.npmrc`
+- [ ] `homebrew set <name>` — Set `HOMEBREW_BOTTLE_DOMAIN` and other env vars
 - [ ] `homebrew set <name>` — Set `HOMEBREW_BOTTLE_DOMAIN` and other env vars
 - [ ] `gem set <name>` — Change `gem` source
 - [ ] `cargo set <name>` — Write `~/.cargo/config.toml`
