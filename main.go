@@ -12,10 +12,12 @@ package main
 import (
 	"os"
 
+	"github.com/bingym/mirrorctl/internal/debian"
 	"github.com/bingym/mirrorctl/internal/docker"
 	"github.com/bingym/mirrorctl/internal/github"
 	"github.com/bingym/mirrorctl/internal/goproxy"
 	"github.com/bingym/mirrorctl/internal/pypi"
+	"github.com/bingym/mirrorctl/internal/ubuntu"
 	"github.com/spf13/cobra"
 )
 
@@ -38,6 +40,8 @@ func init() {
 	rootCmd.AddCommand(goproxy.Command())
 	rootCmd.AddCommand(github.Command())
 	rootCmd.AddCommand(docker.Command())
+	rootCmd.AddCommand(ubuntu.Command())
+	rootCmd.AddCommand(debian.Command())
 	rootCmd.SetVersionTemplate("mirrorctl {{.Version}}\n")
 	rootCmd.Version = version
 }

@@ -21,9 +21,15 @@ mirrorctl pypi unset           # Remove pip mirror config, restore default
 mirrorctl github convert https://github.com/user/repo          # Convert GitHub URL to proxy URL
 mirrorctl github download https://github.com/user/repo/archive/refs/heads/main.zip  # Download via proxy
 mirrorctl github clone user/repo                               # Clone repo via proxy accelerator
+
+mirrorctl ubuntu config                # Show current Ubuntu APT mirror
+mirrorctl ubuntu set tuna              # Switch Ubuntu to Tsinghua TUNA mirror
+mirrorctl ubuntu list                  # List available Ubuntu mirrors
+mirrorctl debian config                # Show current Debian APT mirror
+mirrorctl debian set ustc              # Switch Debian to USTC mirror
 ```
 
-Planned support for `ubuntu`, `npm`, `homebrew`, `gem`, `cargo`, and more.
+Planned support for `npm`, `homebrew`, `gem`, `cargo`, and more.
 
 ### docker
 
@@ -105,6 +111,31 @@ The proxy prefix `https://gh-proxy.com/` is prepended to GitHub URLs to route tr
 
 The proxy prefix `gh-proxy.org/docker/` is prepended to image references (used as a Docker registry host/path). Supports all public registries including Docker Hub, GCR, GHCR, Quay, MCR, and more.
 
+### ubuntu
+
+| name     | Maintainer                          | URL                                          |
+|----------|-------------------------------------|----------------------------------------------|
+| ustc     | USTC                                | https://mirrors.ustc.edu.cn/ubuntu/          |
+| tuna     | Tsinghua University TUNA            | https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ |
+| aliyun   | Alibaba Cloud                       | https://mirrors.aliyun.com/ubuntu/           |
+| 163      | NetEase 163                         | https://mirrors.163.com/ubuntu/              |
+| huawei   | Huawei Cloud                        | https://mirrors.huaweicloud.com/ubuntu/      |
+| tencent  | Tencent Cloud                       | https://mirrors.tencent.com/ubuntu/          |
+
+Replaces `archive.ubuntu.com` and `security.ubuntu.com` with the mirror hostname in `/etc/apt/sources.list` or `/etc/apt/sources.list.d/ubuntu.sources` (auto-detects DEB822 vs traditional format). Requires root.
+
+### debian
+
+| name     | Maintainer                          | URL                                          |
+|----------|-------------------------------------|----------------------------------------------|
+| ustc     | USTC                                | https://mirrors.ustc.edu.cn/debian/          |
+| tuna     | Tsinghua University TUNA            | https://mirrors.tuna.tsinghua.edu.cn/debian/ |
+| aliyun   | Alibaba Cloud                       | https://mirrors.aliyun.com/debian/           |
+| 163      | NetEase 163                         | https://mirrors.163.com/debian/              |
+| huawei   | Huawei Cloud                        | https://mirrors.huaweicloud.com/debian/      |
+
+Replaces `deb.debian.org` with the mirror hostname in `/etc/apt/sources.list` or `/etc/apt/sources.list.d/debian.sources` (auto-detects DEB822 vs traditional format). Requires root.
+
 ## Project Structure
 
 ```
@@ -124,8 +155,16 @@ mirrorctl/
 	│   └── goproxy/
 │       ├── goproxy.go      # goproxy subcommand implementation
 │       └── goproxy_test.go
-│   └── github/
-│       └── github.go       # github subcommand implementation (convert/download/clone)
+│   ├── github/
+│   │   └── github.go       # github subcommand implementation (convert/download/clone)
+│   ├── docker/
+│   │   └── docker.go       # docker subcommand implementation (convert/pull)
+│   ├── apt/
+│   │   └── apt.go          # Shared Debian/Ubuntu apt source management
+│   ├── ubuntu/
+│   │   └── ubuntu.go       # ubuntu subcommand implementation (config/set/list/unset)
+│   └── debian/
+│       └── debian.go       # debian subcommand implementation (config/set/list/unset)
 └── docs/
 ```
 
@@ -140,6 +179,8 @@ mirrorctl/
 - [x] Go unit tests
 - [x] GitHub proxy accelerator (convert / download / clone)
 - [x] Docker image proxy accelerator (convert / pull)
+- [x] Ubuntu APT mirror support (config / set / list / unset)
+- [x] Debian APT mirror support (config / set / list / unset)
 
 ### Features
 
@@ -168,8 +209,19 @@ mirrorctl/
 - [x] `docker convert <image>` — Convert Docker image ref to proxy URL
 - [x] `docker pull <image>` — Pull Docker images via proxy
 
+### ubuntu (APT)
+- [x] `ubuntu config` — Show current Ubuntu APT mirror configuration
+- [x] `ubuntu set <name>` — Rewrite apt sources (DEB822 + traditional formats)
+- [x] `ubuntu list` — List all supported Ubuntu mirrors
+- [x] `ubuntu unset` — Restore from backup
+
+### debian (APT)
+- [x] `debian config` — Show current Debian APT mirror configuration
+- [x] `debian set <name>` — Rewrite apt sources (DEB822 + traditional formats)
+- [x] `debian list` — List all supported Debian mirrors
+- [x] `debian unset` — Restore from backup
+
 ### Other types (planned)
-- [ ] `ubuntu set <name>` — Rewrite `/etc/apt/sources.list`
 - [ ] `npm set <name>` — Write `.npmrc`
 - [ ] `homebrew set <name>` — Set `HOMEBREW_BOTTLE_DOMAIN` and other env vars
 - [ ] `gem set <name>` — Change `gem` source

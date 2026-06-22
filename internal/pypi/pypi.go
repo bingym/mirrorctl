@@ -5,12 +5,8 @@ package pypi
 import (
 	"bufio"
 	"fmt"
-	"net/http"
 	"os"
-	"sort"
 	"strings"
-	"sync"
-	"time"
 
 	"github.com/bingym/mirrorctl/internal/util"
 	"github.com/spf13/cobra"
@@ -282,68 +278,12 @@ func cmdUnset() int {
 
 // --- test ---
 
-// mirrorResult holds the latency test result for a single mirror.
-type mirrorResult struct {
-	name    string
-	desc    string
-	latency time.Duration
-	err     error
-}
-
-// testMirror sends an HTTP HEAD request to the mirror and measures round-trip time.
-func testMirror(m Mirror) mirrorResult {
-	client := &http.Client{Timeout: 5 * time.Second}
-	start := time.Now()
-	resp, err := client.Head(m.URL)
-	elapsed := time.Since(start)
-	if err != nil {
-		return mirrorResult{name: m.Name, desc: m.Desc, err: err}
-	}
-	resp.Body.Close()
-	return mirrorResult{name: m.Name, desc: m.Desc, latency: elapsed}
-}
-
 func cmdTest() int {
-	fmt.Println("Testing PyPI mirrors...")
-	fmt.Println()
-
-	results := make([]mirrorResult, len(Mirrors))
-	var wg sync.WaitGroup
-
+	targets := make([]util.MirrorTarget, len(Mirrors))
 	for i, m := range Mirrors {
-		wg.Add(1)
-		go func(idx int, mirror Mirror) {
-			defer wg.Done()
-			results[idx] = testMirror(mirror)
-		}(i, m)
+		targets[i] = util.MirrorTarget{Name: m.Name, Desc: m.Desc, URL: m.URL}
 	}
-	wg.Wait()
-
-	// Sort: successful first by latency ascending, errors last (alphabetical)
-	sort.SliceStable(results, func(i, j int) bool {
-		ei, ej := results[i].err, results[j].err
-		if ei != nil && ej != nil {
-			return results[i].name < results[j].name
-		}
-		if ei != nil {
-			return false
-		}
-		if ej != nil {
-			return true
-		}
-		return results[i].latency < results[j].latency
-	})
-
-	fmt.Printf("  %-8s %-48s %s\n", "name", "description", "latency")
-	fmt.Printf("  %-8s %-48s %s\n", "----", "-----------", "-------")
-	for _, r := range results {
-		if r.err != nil {
-			fmt.Printf("  %-8s %-48s %s\n", r.name, r.desc, r.err.Error())
-		} else {
-			ms := float64(r.latency) / float64(time.Millisecond)
-			fmt.Printf("  %-8s %-48s %.0f ms\n", r.name, r.desc, ms)
-		}
-	}
-	fmt.Println()
+	results := util.TestMirrors(targets)
+	util.PrintTestResults("Testing PyPI mirrors...", results)
 	return 0
 }

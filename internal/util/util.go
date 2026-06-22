@@ -4,11 +4,102 @@ package util
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"os/user"
 	"path/filepath"
+	"sort"
 	"strings"
+	"sync"
+	"time"
 )
+
+// MirrorTarget describes a mirror to test.
+type MirrorTarget struct {
+	Name string
+	Desc string
+	URL  string
+}
+
+// MirrorResult holds the latency test result for a single mirror.
+type MirrorResult struct {
+	Name    string
+	Desc    string
+	Latency time.Duration
+	Err     error
+}
+
+// TestMirrors concurrently sends HEAD requests to all targets and returns
+// results sorted by latency (successful first, errors last alphabetically).
+func TestMirrors(targets []MirrorTarget) []MirrorResult {
+	results := make([]MirrorResult, len(targets))
+	var wg sync.WaitGroup
+
+	for i, t := range targets {
+		wg.Add(1)
+		go func(idx int, target MirrorTarget) {
+			defer wg.Done()
+			client := &http.Client{Timeout: 5 * time.Second}
+			start := time.Now()
+			resp, err := client.Head(target.URL)
+			elapsed := time.Since(start)
+			if err != nil {
+				results[idx] = MirrorResult{Name: target.Name, Desc: target.Desc, Err: err}
+				return
+			}
+			resp.Body.Close()
+			results[idx] = MirrorResult{Name: target.Name, Desc: target.Desc, Latency: elapsed}
+		}(i, t)
+	}
+	wg.Wait()
+
+	sort.SliceStable(results, func(i, j int) bool {
+		ei, ej := results[i].Err, results[j].Err
+		if ei != nil && ej != nil {
+			return results[i].Name < results[j].Name
+		}
+		if ei != nil {
+			return false
+		}
+		if ej != nil {
+			return true
+		}
+		return results[i].Latency < results[j].Latency
+	})
+
+	return results
+}
+
+// PrintTestResults prints a formatted latency test result table to stdout.
+func PrintTestResults(title string, results []MirrorResult) {
+	fmt.Println(title)
+	fmt.Println()
+
+	// Calculate column widths dynamically
+	nameW := 8
+	descW := 44
+	for _, r := range results {
+		if len(r.Name) > nameW {
+			nameW = len(r.Name)
+		}
+		if len(r.Desc) > descW {
+			descW = len(r.Desc)
+		}
+	}
+
+	hdrFmt := fmt.Sprintf("  %%-%ds %%-%ds %%s\n", nameW, descW)
+	fmt.Fprintf(os.Stdout, hdrFmt, "name", "description", "latency")
+	fmt.Fprintf(os.Stdout, hdrFmt, strings.Repeat("-", nameW), strings.Repeat("-", descW), "-------")
+	for _, r := range results {
+		if r.Err != nil {
+			fmt.Fprintf(os.Stdout, hdrFmt, r.Name, r.Desc, r.Err.Error())
+		} else {
+			ms := float64(r.Latency) / float64(time.Millisecond)
+			fmt.Fprintf(os.Stdout, hdrFmt, r.Name, r.Desc, fmt.Sprintf("%.0f ms", ms))
+		}
+	}
+	fmt.Println()
+}
 
 // Die prints a fatal error to stderr and exits with code 1.
 func Die(format string, args ...any) {

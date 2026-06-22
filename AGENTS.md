@@ -21,9 +21,11 @@ See the TODO section in `README.md` for details. Brief status:
 - ✅ goproxy subcommand: `config` / `set <name>` / `list` / `unset` / `test`
 - ✅ github subcommand: `convert` / `download` / `clone`
 - ✅ docker subcommand: `convert` / `pull`
+- ✅ ubuntu subcommand: `config` / `set <name>` / `list` / `unset`
+- ✅ debian subcommand: `config` / `set <name>` / `list` / `unset`
 - ✅ Unit tests (Go standard `testing` package)
-- 🔜 Next: `ubuntu set <name>`
-- ❌ Not yet implemented: npm / homebrew / gem / cargo / go types
+- 🔜 Next: npm / homebrew
+- ❌ Not yet implemented: gem / cargo / go types
 
 ## Directory Structure
 
@@ -42,10 +44,19 @@ mirrorctl/
     ├── pypi/
     │   ├── pypi.go      # pypi subcommand implementation (mirror table + four actions)
     │   └── pypi_test.go
+    ├── goproxy/
+    │   ├── goproxy.go   # goproxy subcommand implementation
+    │   └── goproxy_test.go
     ├── github/
     │   └── github.go    # github subcommand implementation (convert/download/clone)
-    └── docker/
-        └── docker.go    # docker subcommand implementation (convert/pull)
+    ├── docker/
+    │   └── docker.go    # docker subcommand implementation (convert/pull)
+    ├── apt/
+    │   └── apt.go       # Shared Debian/Ubuntu apt source management: distro detection, format detection (DEB822 vs traditional), domain replacement, backup/restore.
+    ├── ubuntu/
+    │   └── ubuntu.go    # ubuntu subcommand implementation (config/set/list/unset)
+    └── debian/
+        └── debian.go    # debian subcommand implementation (config/set/list/unset)
 ```
 
 ### File Responsibilities
@@ -57,6 +68,9 @@ mirrorctl/
 | `internal/pypi/pypi.go`| Implements pypi subcommand (config / set / list / unset / test). Maintains `Mirrors` slice, knows pip config file paths. Exposes `Command() *cobra.Command`. |
 | `internal/github/github.go`| Implements github subcommand (convert / download / clone). Uses gh-proxy.com for GitHub URL acceleration. |
 | `internal/docker/docker.go`| Implements docker subcommand (convert / pull). Uses gh-proxy.org/docker for image pull acceleration. |
+| `internal/apt/apt.go`| Shared Debian/Ubuntu apt source management: distro detection, format detection (DEB822 vs traditional), domain replacement, backup/restore. |
+| `internal/ubuntu/ubuntu.go`| Implements ubuntu subcommand (config / set / list / unset). Uses apt package for source management. |
+| `internal/debian/debian.go`| Implements debian subcommand (config / set / list / unset). Uses apt package for source management. |
 
 ## Design Conventions
 
