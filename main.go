@@ -12,6 +12,7 @@ package main
 import (
 	"os"
 
+	"github.com/bingym/mirrorctl/internal/goproxy"
 	"github.com/bingym/mirrorctl/internal/pypi"
 	"github.com/spf13/cobra"
 )
@@ -32,6 +33,7 @@ var rootCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(pypi.Command())
+	rootCmd.AddCommand(goproxy.Command())
 	rootCmd.SetVersionTemplate("mirrorctl {{.Version}}\n")
 	rootCmd.Version = version
 }
