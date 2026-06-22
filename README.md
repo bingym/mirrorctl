@@ -33,9 +33,10 @@ mirrorctl npm set npmmirror            # Switch npm to npmmirror (Taobao)
 mirrorctl yarn set npmmirror           # Switch Yarn (Berry) to npmmirror
 mirrorctl pnpm set npmmirror           # Switch pnpm to npmmirror
 mirrorctl uv set tuna                  # Switch uv to TUNA PyPI mirror
+mirrorctl brew set tuna                # Switch Homebrew to TUNA mirror
 ```
 
-Planned support for `homebrew`, `gem`, `cargo`, and more.
+Planned support for `gem`, `cargo`, and more.
 
 ### docker
 
@@ -155,13 +156,23 @@ npm writes `registry=<url>` to `~/.npmrc`. yarn writes `npmRegistryServer: "<url
 
 ### uv
 
-| name   | Maintainer                          | index URL                                       |
-|--------|-------------------------------------|-------------------------------------------------|
-| tuna   | Tsinghua University TUNA            | https://pypi.tuna.tsinghua.edu.cn/simple/       |
-| aliyun | Alibaba Cloud                       | https://mirrors.aliyun.com/pypi/simple/         |
-| ustc   | USTC                                | https://pypi.mirrors.ustc.edu.cn/simple/        |
+| name   | Maintainer                          | index URL                                       | python-install-mirror                        |
+|--------|-------------------------------------|-------------------------------------------------|----------------------------------------------|
+| tuna   | Tsinghua University TUNA            | https://pypi.tuna.tsinghua.edu.cn/simple/       | https://mirrors.tuna.tsinghua.edu.cn/python/ |
+| aliyun | Alibaba Cloud                       | https://mirrors.aliyun.com/pypi/simple/         | https://mirrors.aliyun.com/python/           |
+| ustc   | USTC                                | https://pypi.mirrors.ustc.edu.cn/simple/        | https://mirrors.ustc.edu.cn/python/          |
 
-Writes `[[index]]` section with `url` to `~/.config/uv/uv.toml`.
+Writes `[[index]]` + `url` for `uv pip install` and `python-install-mirror` for `uv python install` to `~/.config/uv/uv.toml`.
+
+### brew
+
+| name   | Maintainer               | brew git remote                                           | core git remote                                              | bottle domain                                      |
+|--------|--------------------------|-----------------------------------------------------------|--------------------------------------------------------------|----------------------------------------------------|
+| tuna   | Tsinghua University TUNA | https://mirrors.tuna.tsinghua.edu.cn/git/homebrew/brew.git | https://mirrors.tuna.tsinghua.edu.cn/git/homebrew/homebrew-core.git | https://mirrors.tuna.tsinghua.edu.cn/homebrew-bottles |
+| ustc   | USTC                     | https://mirrors.ustc.edu.cn/brew.git                      | https://mirrors.ustc.edu.cn/homebrew-core.git                | https://mirrors.ustc.edu.cn/homebrew-bottles       |
+| huawei | Huawei Cloud             | https://repo.huaweicloud.com/homebrew/brew.git            | https://repo.huaweicloud.com/homebrew/homebrew-core.git      | https://repo.huaweicloud.com/homebrew-bottles      |
+
+Sets git remote URLs for `Homebrew/brew` and `Homebrew/homebrew-core`, and writes `HOMEBREW_BOTTLE_DOMAIN` to `~/.config/mirrorctl/brew.env`. Requires `brew` installed.
 
 ## Project Structure
 
@@ -198,8 +209,10 @@ mirrorctl/
 │   │   └── yarn.go         # yarn subcommand implementation (config/set/list/unset/test)
 │   ├── pnpm/
 │   │   └── pnpm.go         # pnpm subcommand implementation (config/set/list/unset/test)
-│   └── uv/
-│       └── uv.go           # uv subcommand implementation (config/set/list/unset/test)
+│   ├── uv/
+│   │   └── uv.go           # uv subcommand implementation (config/set/list/unset/test)
+│   └── brew/
+│       └── brew.go         # brew subcommand implementation (config/set/list/unset/test)
 └── docs/
 ```
 
@@ -220,6 +233,7 @@ mirrorctl/
 - [x] yarn registry mirror support (config / set / list / unset / test)
 - [x] pnpm registry mirror support (config / set / list / unset / test)
 - [x] uv index mirror support (config / set / list / unset / test)
+- [x] Homebrew mirror support (config / set / list / unset / test)
 
 ### Features
 
@@ -283,14 +297,19 @@ mirrorctl/
 
 ### uv
 - [x] `uv config` — Show current uv index configuration
-- [x] `uv set <name>` — Set uv index via ~/.config/uv/uv.toml
+- [x] `uv set <name>` — Set uv index + python-install-mirror via ~/.config/uv/uv.toml
 - [x] `uv list` — List all supported uv mirrors
 - [x] `uv unset` — Restore from backup
 - [x] `uv test` — Test connectivity and latency of all uv mirrors
 
+### brew
+- [x] `brew config` — Show current Homebrew mirror configuration (git remotes + env file)
+- [x] `brew set <name>` — Set Homebrew git remotes + bottle domain
+- [x] `brew list` — List all supported brew mirrors
+- [x] `brew unset` — Restore git remotes to GitHub upstream
+- [x] `brew test` — Test connectivity and latency of all brew mirrors
+
 ### Other types (planned)
-- [ ] `homebrew set <name>` — Set `HOMEBREW_BOTTLE_DOMAIN` and other env vars
-- [ ] `homebrew set <name>` — Set `HOMEBREW_BOTTLE_DOMAIN` and other env vars
 - [ ] `gem set <name>` — Change `gem` source
 - [ ] `cargo set <name>` — Write `~/.cargo/config.toml`
 

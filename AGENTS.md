@@ -27,8 +27,8 @@ See the TODO section in `README.md` for details. Brief status:
 - ✅ yarn subcommand: `config` / `set <name>` / `list` / `unset` / `test`
 - ✅ pnpm subcommand: `config` / `set <name>` / `list` / `unset` / `test`
 - ✅ uv subcommand: `config` / `set <name>` / `list` / `unset` / `test`
+- ✅ brew subcommand: `config` / `set <name>` / `list` / `unset` / `test`
 - ✅ Unit tests (Go standard `testing` package)
-- 🔜 Next: homebrew
 - ❌ Not yet implemented: gem / cargo / go types
 
 ## Directory Structure
@@ -67,8 +67,10 @@ mirrorctl/
     │   └── yarn.go      # yarn subcommand implementation (config/set/list/unset/test)
     ├── pnpm/
     │   └── pnpm.go      # pnpm subcommand implementation (config/set/list/unset/test)
-    └── uv/
-        └── uv.go        # uv subcommand implementation (config/set/list/unset/test)
+    ├── uv/
+    │   └── uv.go        # uv subcommand implementation (config/set/list/unset/test)
+    └── brew/
+        └── brew.go      # brew subcommand implementation (config/set/list/unset/test)
 ```
 
 ### File Responsibilities
@@ -87,7 +89,8 @@ mirrorctl/
 | `internal/npm/npm.go`| Implements npm subcommand (config / set / list / unset / test). Manages ~/.npmrc registry. |
 | `internal/yarn/yarn.go`| Implements yarn subcommand (config / set / list / unset / test). Manages ~/.yarnrc.yml. |
 | `internal/pnpm/pnpm.go`| Implements pnpm subcommand (config / set / list / unset / test). Uses `pnpm config` command. |
-| `internal/uv/uv.go`| Implements uv subcommand (config / set / list / unset / test). Manages ~/.config/uv/uv.toml. |
+| `internal/uv/uv.go`| Implements uv subcommand (config / set / list / unset / test). Manages ~/.config/uv/uv.toml with `[[index]]` for `uv pip install` and `python-install-mirror` for `uv python install`. |
+| `internal/brew/brew.go`| Implements brew subcommand (config / set / list / unset / test). Manages Homebrew git remote URLs + HOMEBREW_BOTTLE_DOMAIN via ~/.config/mirrorctl/brew.env. |
 
 ## Design Conventions
 
@@ -236,20 +239,3 @@ For example, adding a `douban` mirror to pypi:
 - When adding new files, add an entry in the "Directory Structure" section of this file.
 - Do not delete seemingly verbose explanations in `AGENTS.md` for the sake of "brevity"; these provide context for subsequent agents.
 - Commit messages should follow the `<type>: <description>` format, e.g. `feat: implement pypi set subcommand`.
-
-## Migration Notes from C to Go
-
-This project was originally written in C and later fully migrated to Go. Key changes:
-
-| C Version                        | Go Version                         |
-|----------------------------------|------------------------------------|
-| `src/main.c`                     | `main.go`                          |
-| `src/util.h` (header-only)       | `internal/util/util.go`            |
-| `src/pypi.{c,h}`                 | `internal/pypi/pypi.go`            |
-| `Makefile` (gcc + ld)            | `Makefile` (go build)              |
-| Manual malloc/free               | Go GC automatic management         |
-| `sbuf_t` dynamic string          | `strings.Builder`                  |
-| Custom test framework (planned)  | Standard `testing` package         |
-| `strndup` / `memchr` manual parsing | `bufio.Scanner` + `strings` package |
-
-The Go version maintains exactly the same behavior and user experience as the C version, but with safer and more maintainable code.

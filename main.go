@@ -18,6 +18,7 @@ import (
 	"github.com/bingym/mirrorctl/internal/goproxy"
 	"github.com/bingym/mirrorctl/internal/npm"
 	"github.com/bingym/mirrorctl/internal/pnpm"
+	"github.com/bingym/mirrorctl/internal/brew"
 	"github.com/bingym/mirrorctl/internal/pypi"
 	"github.com/bingym/mirrorctl/internal/ubuntu"
 	"github.com/bingym/mirrorctl/internal/uv"
@@ -41,6 +42,7 @@ var rootCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(pypi.Command())
+	rootCmd.AddCommand(brew.Command())
 	rootCmd.AddCommand(goproxy.Command())
 	rootCmd.AddCommand(github.Command())
 	rootCmd.AddCommand(docker.Command())
