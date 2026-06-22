@@ -17,9 +17,24 @@ mirrorctl pypi set aliyun      # Switch to Alibaba Cloud mirror
 mirrorctl pypi set ustc        # Switch to USTC mirror
 mirrorctl pypi list            # List all available PyPI mirrors
 mirrorctl pypi unset           # Remove pip mirror config, restore default
+
+mirrorctl github convert https://github.com/user/repo          # Convert GitHub URL to proxy URL
+mirrorctl github download https://github.com/user/repo/archive/refs/heads/main.zip  # Download via proxy
+mirrorctl github clone user/repo                               # Clone repo via proxy accelerator
 ```
 
 Planned support for `ubuntu`, `npm`, `homebrew`, `gem`, `cargo`, and more.
+
+### docker
+
+Convert and pull Docker images through an acceleration proxy (gh-proxy.org/docker/):
+
+```sh
+mirrorctl docker convert nginx:latest                           # Convert image ref to proxy URL
+mirrorctl docker pull nginx:latest                               # Pull image via proxy accelerator
+mirrorctl docker pull --strip nginx:latest                       # Pull and strip proxy prefix from image name
+mirrorctl docker pull gcr.io/kaniko-project/executor:debug       # Pull from GCR via proxy
+```
 
 ## Building
 
@@ -71,6 +86,25 @@ trusted-host = pypi.tuna.tsinghua.edu.cn
 
 Uses `go env -w GOPROXY=<url>,direct` to set the proxy. Configuration is stored in `$GOENV` (typically `~/.config/go/env`).
 
+### github
+
+| Feature | Proxy URL                          | Description                              |
+|---------|------------------------------------|------------------------------------------|
+| convert | `https://gh-proxy.com/...+URL`     | Convert GitHub URL to proxy URL          |
+| download| curl via proxy                     | Download files through proxy accelerator |
+| clone   | git clone via proxy                | Clone repos through proxy accelerator    |
+
+The proxy prefix `https://gh-proxy.com/` is prepended to GitHub URLs to route traffic through CDN-accelerated nodes, improving access speed in regions where GitHub is slow or unreliable.
+
+### docker
+
+| Feature | Proxy URL                              | Description                              |
+|---------|----------------------------------------|------------------------------------------|
+| convert | `gh-proxy.org/docker/...+ref`          | Convert Docker image ref to proxy ref    |
+| pull    | docker pull via proxy                  | Pull Docker images through proxy accelerator |
+
+The proxy prefix `gh-proxy.org/docker/` is prepended to image references (used as a Docker registry host/path). Supports all public registries including Docker Hub, GCR, GHCR, Quay, MCR, and more.
+
 ## Project Structure
 
 ```
@@ -87,9 +121,11 @@ mirrorctl/
 │   ├── pypi/
 │   │   ├── pypi.go         # pypi subcommand implementation
 │   │   └── pypi_test.go
-│   └── goproxy/
+	│   └── goproxy/
 │       ├── goproxy.go      # goproxy subcommand implementation
 │       └── goproxy_test.go
+│   └── github/
+│       └── github.go       # github subcommand implementation (convert/download/clone)
 └── docs/
 ```
 
@@ -102,6 +138,8 @@ mirrorctl/
 - [x] PyPI mirror source data table
 - [x] Go module proxy mirror source data table
 - [x] Go unit tests
+- [x] GitHub proxy accelerator (convert / download / clone)
+- [x] Docker image proxy accelerator (convert / pull)
 
 ### Features
 
@@ -120,6 +158,15 @@ mirrorctl/
 - [x] `goproxy list` — List all supported Go module proxy mirrors
 - [x] `goproxy unset` — Remove GOPROXY setting via `go env -u`
 - [x] `goproxy test` — Test connectivity and latency of all Go module proxy mirrors
+
+### github (GitHub proxy accelerator)
+- [x] `github convert <url>` — Convert GitHub URL to proxy URL
+- [x] `github download <url>` — Download files via proxy (curl)
+- [x] `github clone <url>` — Clone repos via proxy (git clone)
+
+### docker (Docker image proxy accelerator)
+- [x] `docker convert <image>` — Convert Docker image ref to proxy URL
+- [x] `docker pull <image>` — Pull Docker images via proxy
 
 ### Other types (planned)
 - [ ] `ubuntu set <name>` — Rewrite `/etc/apt/sources.list`

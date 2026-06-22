@@ -18,6 +18,9 @@ See the TODO section in `README.md` for details. Brief status:
 
 - ✅ CLI skeleton with [cobra](https://github.com/spf13/cobra) (`main.go` root command)
 - ✅ pypi subcommand: `config` / `set <name>` / `list` / `unset` / `test`
+- ✅ goproxy subcommand: `config` / `set <name>` / `list` / `unset` / `test`
+- ✅ github subcommand: `convert` / `download` / `clone`
+- ✅ docker subcommand: `convert` / `pull`
 - ✅ Unit tests (Go standard `testing` package)
 - 🔜 Next: `ubuntu set <name>`
 - ❌ Not yet implemented: npm / homebrew / gem / cargo / go types
@@ -36,9 +39,13 @@ mirrorctl/
     ├── util/
     │   ├── util.go      # Common utilities: error reporting, path expansion, file I/O, atomic write
     │   └── util_test.go
-    └── pypi/
-        ├── pypi.go      # pypi subcommand implementation (mirror table + four actions)
-        └── pypi_test.go
+    ├── pypi/
+    │   ├── pypi.go      # pypi subcommand implementation (mirror table + four actions)
+    │   └── pypi_test.go
+    ├── github/
+    │   └── github.go    # github subcommand implementation (convert/download/clone)
+    └── docker/
+        └── docker.go    # docker subcommand implementation (convert/pull)
 ```
 
 ### File Responsibilities
@@ -48,6 +55,8 @@ mirrorctl/
 | `main.go`              | `main()` entry point; defines the cobra root command and registers type subcommands via `rootCmd.AddCommand()`. Only dispatches, no concrete logic. |
 | `internal/util/util.go`| Common utilities: `Die()` for fatal errors, `ExpandHome()` for `~` expansion, `ReadFile()` / `WriteFileAtomic()` and other general-purpose functions. |
 | `internal/pypi/pypi.go`| Implements pypi subcommand (config / set / list / unset / test). Maintains `Mirrors` slice, knows pip config file paths. Exposes `Command() *cobra.Command`. |
+| `internal/github/github.go`| Implements github subcommand (convert / download / clone). Uses gh-proxy.com for GitHub URL acceleration. |
+| `internal/docker/docker.go`| Implements docker subcommand (convert / pull). Uses gh-proxy.org/docker for image pull acceleration. |
 
 ## Design Conventions
 

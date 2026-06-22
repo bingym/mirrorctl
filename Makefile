@@ -17,6 +17,9 @@ all: $(TARGET)
 
 $(TARGET): $(shell find . -name '*.go') go.mod | $(BIN_DIR)
 	$(GO) build $(GOFLAGS) -ldflags "$(LDFLAGS)" -o $@ .
+	@if command -v upx >/dev/null 2>&1; then \
+		upx --best --no-color -q -o $@.packed $@ && mv $@.packed $@; \
+	fi
 
 $(BIN_DIR):
 	@mkdir -p $@
