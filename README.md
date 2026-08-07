@@ -40,13 +40,18 @@ Planned support for `gem`, `cargo`, and more.
 
 ### docker
 
-Convert and pull Docker images through an acceleration proxy (gh-proxy.org/docker/):
+Convert and pull Docker images through an acceleration proxy. Two accelerators are available via `--proxy`:
+
+- `gh-proxy` (default): prefix `gh-proxy.org/docker/`
+- `1ms`: replace registry host with a 1ms.run mirror (`docker.io` → `docker.1ms.run`, `ghcr.io` → `ghcr.1ms.run`, `registry.k8s.io` → `k8s.1ms.run`, ...)
 
 ```sh
-mirrorctl docker convert nginx:latest                           # Convert image ref to proxy URL
+mirrorctl docker convert nginx:latest                           # Convert image ref to proxy URL (gh-proxy)
+mirrorctl docker convert --proxy 1ms nginx:latest               # Convert using 1ms.run accelerator
+mirrorctl docker convert --proxy 1ms ghcr.io/user/repo:tag      # ghcr.io -> ghcr.1ms.run
 mirrorctl docker pull nginx:latest                               # Pull image via proxy accelerator
 mirrorctl docker pull --strip nginx:latest                       # Pull and strip proxy prefix from image name
-mirrorctl docker pull gcr.io/kaniko-project/executor:debug       # Pull from GCR via proxy
+mirrorctl docker pull --proxy 1ms gcr.io/kaniko-project/executor:debug  # Pull from GCR via 1ms
 ```
 
 ## Building
@@ -113,10 +118,11 @@ The proxy prefix `https://gh-proxy.com/` is prepended to GitHub URLs to route tr
 
 | Feature | Proxy URL                              | Description                              |
 |---------|----------------------------------------|------------------------------------------|
-| convert | `gh-proxy.org/docker/...+ref`          | Convert Docker image ref to proxy ref    |
+| convert | `gh-proxy.org/docker/...+ref`          | Convert Docker image ref to proxy ref (gh-proxy) |
+| convert | `docker.1ms.run/...` etc.              | Convert registry host to 1ms.run mirror (`--proxy 1ms`) |
 | pull    | docker pull via proxy                  | Pull Docker images through proxy accelerator |
 
-The proxy prefix `gh-proxy.org/docker/` is prepended to image references (used as a Docker registry host/path). Supports all public registries including Docker Hub, GCR, GHCR, Quay, MCR, and more.
+The default proxy prefix `gh-proxy.org/docker/` is prepended to image references (used as a Docker registry host/path). With `--proxy 1ms`, the registry host is replaced by its 1ms.run equivalent (`docker.io` → `docker.1ms.run`, `ghcr.io` → `ghcr.1ms.run`, `gcr.io` → `gcr.1ms.run`, `registry.k8s.io` → `k8s.1ms.run`, `nvcr.io` → `nvcr.1ms.run`, `quay.io` → `quay.1ms.run`, `mcr.microsoft.com` → `mcr.1ms.run`, `docker.elastic.co` → `elastic.1ms.run`). Supports all public registries including Docker Hub, GCR, GHCR, Quay, MCR, and more.
 
 ### ubuntu
 
