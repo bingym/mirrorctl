@@ -40,17 +40,28 @@ Planned support for `gem`, `cargo`, and more.
 
 ### docker
 
-Convert and pull Docker images through an acceleration proxy. Two accelerators are available via `--proxy`:
+Convert and pull Docker images through an acceleration proxy. Run `mirrorctl docker proxy list`
+to see every proxy; `--proxy` accepts any name (or alias) from that table:
 
-- `gh-proxy` (default): prefix `gh-proxy.org/docker/`
-- `1ms`: replace registry host with a 1ms.run mirror (`docker.io` → `docker.1ms.run`, `ghcr.io` → `ghcr.1ms.run`, `registry.k8s.io` → `k8s.1ms.run`, ...)
+| name              | mode     | prefix / rewrite              | notes                        |
+|-------------------|----------|-------------------------------|------------------------------|
+| `gh-proxy` (default) | prefix | `gh-proxy.org/docker/`       | main site, Cloudflare v4     |
+| `gh-proxy-v4`     | prefix   | `v4.gh-proxy.org/docker/`     | China-optimised node, recommended, IPv4 |
+| `gh-proxy-v6`     | prefix   | `v6.gh-proxy.org/docker/`     | IPv4/IPv6 dual stack         |
+| `gh-proxy-fastly` | prefix   | `cdn.gh-proxy.org/docker/`    | Fastly CDN                   |
+| `1ms`             | registry | `docker.io` → `docker.1ms.run` etc. | 1ms.run per-registry mirrors |
+
+A custom proxy host can be used too: `--proxy docker.example.com` becomes `<host>/docker/<image>`.
 
 ```sh
+mirrorctl docker proxy list                                     # List all supported proxies
 mirrorctl docker convert nginx:latest                           # Convert image ref to proxy URL (gh-proxy)
 mirrorctl docker convert --proxy 1ms nginx:latest               # Convert using 1ms.run accelerator
+mirrorctl docker convert --proxy v4 nginx:latest                # Convert using the China-optimised node
 mirrorctl docker convert --proxy 1ms ghcr.io/user/repo:tag      # ghcr.io -> ghcr.1ms.run
 mirrorctl docker pull nginx:latest                               # Pull image via proxy accelerator
 mirrorctl docker pull gcr.io/kaniko-project/executor:debug       # Pull from GCR (retagged to original ref afterwards)
+mirrorctl docker pull gcr.io/kaniko-project/executor:debug --proxy gh-proxy-v6  # Pull over IPv4/IPv6
 mirrorctl docker pull --proxy 1ms gcr.io/kaniko-project/executor:debug  # Pull from GCR via 1ms
 ```
 
@@ -122,10 +133,12 @@ The proxy prefix `https://gh-proxy.com/` is prepended to GitHub URLs to route tr
 | Feature | Proxy URL                              | Description                              |
 |---------|----------------------------------------|------------------------------------------|
 | convert | `gh-proxy.org/docker/...+ref`          | Convert Docker image ref to proxy ref (gh-proxy) |
+| convert | `v4.gh-proxy.org/docker/...` etc.      | Convert with another gh-proxy line (`--proxy v4 / -v6 / -fastly`) |
 | convert | `docker.1ms.run/...` etc.              | Convert registry host to 1ms.run mirror (`--proxy 1ms`) |
 | pull    | docker pull via proxy                  | Pull Docker images through proxy accelerator |
+| proxy   | —                                      | List every supported proxy (`docker proxy list`) |
 
-The default proxy prefix `gh-proxy.org/docker/` is prepended to image references (used as a Docker registry host/path). With `--proxy 1ms`, the registry host is replaced by its 1ms.run equivalent (`docker.io` → `docker.1ms.run`, `ghcr.io` → `ghcr.1ms.run`, `gcr.io` → `gcr.1ms.run`, `registry.k8s.io` → `k8s.1ms.run`, `nvcr.io` → `nvcr.1ms.run`, `quay.io` → `quay.1ms.run`, `mcr.microsoft.com` → `mcr.1ms.run`, `docker.elastic.co` → `elastic.1ms.run`). Supports all public registries including Docker Hub, GCR, GHCR, Quay, MCR, and more.
+Image references are used as Docker registry host/path, not URLs. The default prefix `gh-proxy.org/docker/` is prepended to image references; the other gh-proxy lines (`v4.gh-proxy.org`, `v6.gh-proxy.org`, `cdn.gh-proxy.org`) work the same way and differ only in edge network. With `--proxy 1ms`, the registry host is replaced by its 1ms.run equivalent (`docker.io` → `docker.1ms.run`, `ghcr.io` → `ghcr.1ms.run`, `gcr.io` → `gcr.1ms.run`, `registry.k8s.io` → `k8s.1ms.run`, `nvcr.io` → `nvcr.1ms.run`, `quay.io` → `quay.1ms.run`, `mcr.microsoft.com` → `mcr.1ms.run`, `docker.elastic.co` → `elastic.1ms.run`). Supports all public registries including Docker Hub, GCR, GHCR, Quay, MCR, and more.
 
 ### ubuntu
 
@@ -205,7 +218,8 @@ mirrorctl/
 │   ├── github/
 │   │   └── github.go       # github subcommand implementation (convert/download/clone)
 │   ├── docker/
-│   │   └── docker.go       # docker subcommand implementation (convert/pull)
+│   │   ├── docker.go       # docker subcommand implementation (convert/pull/proxy)
+│   │   └── proxies.go      # Proxy table + per-proxy image reference rewriting
 │   ├── apt/
 │   │   └── apt.go          # Shared Debian/Ubuntu apt source management
 │   ├── ubuntu/
@@ -270,6 +284,7 @@ mirrorctl/
 ### docker (Docker image proxy accelerator)
 - [x] `docker convert <image>` — Convert Docker image ref to proxy URL
 - [x] `docker pull <image>` — Pull Docker images via proxy
+- [x] `docker proxy list` — List all supported proxies (gh-proxy lines + 1ms.run)
 
 ### ubuntu (APT)
 - [x] `ubuntu config` — Show current Ubuntu APT mirror configuration
