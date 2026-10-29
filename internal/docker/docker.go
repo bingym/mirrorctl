@@ -110,7 +110,6 @@ Kubernetes (registry.k8s.io, k8s.gcr.io), and more.`,
   mirrorctl docker convert --proxy 1ms nginx:latest
   mirrorctl docker convert ghcr.io/user/repo:tag
   mirrorctl docker pull nginx:latest
-  mirrorctl docker pull --strip nginx:latest
   mirrorctl docker pull gcr.io/kaniko-project/executor:debug`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) > 0 {
@@ -150,17 +149,18 @@ The converted reference is printed to stdout.`,
 		Short: "Pull a Docker image via proxy accelerator",
 		Long: `Pull a Docker image through the proxy accelerator.
 
-Runs: docker pull <proxy-prefix><image>
+Runs: docker pull <proxy-prefixed-image>, then retags the result to the
+original image reference and removes the proxy-prefixed tag, so the local
+image always carries its original name.
 
 Any public image reference is supported:
   - Official images:  nginx, ubuntu:22.04
   - Other registries: gcr.io/..., ghcr.io/..., quay.io/..., etc.`,
 		Args: cobra.ExactArgs(1),
 	}
-	strip := pullCmd.Flags().Bool("strip", false, "Strip proxy prefix after pull: tag to original name and remove proxy-tagged image")
 	pullCmd.Run = func(cmd *cobra.Command, args []string) {
 		proxy, _ := cmd.Flags().GetString("proxy")
-		os.Exit(cmdPull(args[0], *strip, proxy))
+		os.Exit(cmdPull(args[0], proxy))
 	}
 	cmd.AddCommand(pullCmd)
 
@@ -181,7 +181,7 @@ func cmdConvert(ref, proxy string) int {
 
 // --- pull ---
 
-func cmdPull(ref string, strip bool, proxy string) int {
+func cmdPull(ref, proxy string) int {
 	proxyRef, err := convertImage(ref, proxy)
 	if err != nil {
 		util.Warn("%v", err)
@@ -202,27 +202,32 @@ func cmdPull(ref string, strip bool, proxy string) int {
 		return 1
 	}
 
-	if strip {
-		fmt.Printf("Tagging image: %s -> %s\n", proxyRef, ref)
-		tag := exec.Command("docker", "tag", proxyRef, ref)
-		tag.Stdout = os.Stdout
-		tag.Stderr = os.Stderr
-		if err := tag.Run(); err != nil {
-			util.Warn("docker tag failed: %v", err)
-			return 1
-		}
-
-		fmt.Printf("Removing proxy-prefixed image: %s\n", proxyRef)
-		rmi := exec.Command("docker", "rmi", proxyRef)
-		rmi.Stdout = os.Stdout
-		rmi.Stderr = os.Stderr
-		if err := rmi.Run(); err != nil {
-			util.Warn("docker rmi failed (image may still exist as dangling): %v", err)
-			return 1
-		}
-
-		fmt.Println("Done. Image renamed to original reference.")
+	if proxyRef == ref {
+		// Nothing to strip: the reference was already proxy-prefixed. Skip
+		// retag/remove, which would otherwise delete the just-pulled image.
+		fmt.Println("Image reference is already proxy-prefixed; nothing to strip.")
+		return 0
 	}
+
+	fmt.Printf("Tagging image: %s -> %s\n", proxyRef, ref)
+	tag := exec.Command("docker", "tag", proxyRef, ref)
+	tag.Stdout = os.Stdout
+	tag.Stderr = os.Stderr
+	if err := tag.Run(); err != nil {
+		util.Warn("docker tag failed: %v", err)
+		return 1
+	}
+
+	fmt.Printf("Removing proxy-prefixed image: %s\n", proxyRef)
+	rmi := exec.Command("docker", "rmi", proxyRef)
+	rmi.Stdout = os.Stdout
+	rmi.Stderr = os.Stderr
+	if err := rmi.Run(); err != nil {
+		util.Warn("docker rmi failed (image may still exist as dangling): %v", err)
+		return 1
+	}
+
+	fmt.Println("Done. Image renamed to original reference.")
 
 	return 0
 }

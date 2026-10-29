@@ -1,11 +1,13 @@
 # Build artifacts
 /bin/
+mirrorctl.exe
 
 # Editors / IDE
 *.swp
 *.swo
 *~
 .vscode/
+.workbuddy/
 .idea/
 .cache/
 

@@ -50,9 +50,12 @@ mirrorctl docker convert nginx:latest                           # Convert image 
 mirrorctl docker convert --proxy 1ms nginx:latest               # Convert using 1ms.run accelerator
 mirrorctl docker convert --proxy 1ms ghcr.io/user/repo:tag      # ghcr.io -> ghcr.1ms.run
 mirrorctl docker pull nginx:latest                               # Pull image via proxy accelerator
-mirrorctl docker pull --strip nginx:latest                       # Pull and strip proxy prefix from image name
+mirrorctl docker pull gcr.io/kaniko-project/executor:debug       # Pull from GCR (retagged to original ref afterwards)
 mirrorctl docker pull --proxy 1ms gcr.io/kaniko-project/executor:debug  # Pull from GCR via 1ms
 ```
+
+`docker pull` always retags the pulled image back to its original reference and removes the
+proxy-prefixed tag, so `docker images` shows `nginx:latest` rather than `gh-proxy.org/docker/nginx:latest`.
 
 ## Building
 
