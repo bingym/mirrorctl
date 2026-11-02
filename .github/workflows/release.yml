@@ -7,27 +7,8 @@ on:
 
 jobs:
   build:
-    name: Build ${{ matrix.os }}/${{ matrix.arch }}
-    runs-on: ${{ matrix.runner }}
-    strategy:
-      matrix:
-        include:
-          - os: linux
-            arch: amd64
-            runner: ubuntu-latest
-          - os: linux
-            arch: arm64
-            runner: ubuntu-24.04-arm
-          - os: macos
-            arch: amd64
-            runner: macos-13
-          - os: macos
-            arch: arm64
-            runner: macos-latest
-          - os: windows
-            arch: amd64
-            runner: windows-latest
-
+    name: Build all platforms
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -36,30 +17,13 @@ jobs:
           go-version: stable
 
       - name: Build
-        shell: bash
-        env:
-          GOOS: ${{ matrix.os }}
-          GOARCH: ${{ matrix.arch }}
-        run: |
-          ext=""
-          [ "${{ matrix.os }}" = "windows" ] && ext=".exe"
-          output="mirrorctl-${{ matrix.os }}-${{ matrix.arch }}$ext"
-          go build -trimpath -ldflags "-s -w" -o "$output" .
-          echo "artifact=$output" >> "$GITHUB_ENV"
-
-      - name: Compress (upx) — linux/macos
-        if: matrix.os != 'windows'
-        shell: bash
-        run: |
-          if command -v upx &>/dev/null; then
-            upx --best --no-color "${{ env.artifact }}"
-          fi
+        run: make dist
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.artifact }}
-          path: ${{ env.artifact }}
+          name: dist
+          path: bin/
 
   release:
     name: Create release
@@ -71,9 +35,8 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          pattern: mirrorctl-*
+          name: dist
           path: release-artifacts
-          merge-multiple: true
 
       - name: Generate checksums
         working-directory: release-artifacts
