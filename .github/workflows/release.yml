@@ -42,9 +42,8 @@ jobs:
         working-directory: release-artifacts
         run: |
           for f in mirrorctl-*; do
-            zip "${f%.exe}.zip" "$f"
+            zip "${f%.exe}.zip" "$f" && rm "$f"
           done
-          rm mirrorctl-*
 
       - name: Generate checksums
         working-directory: release-artifacts
