@@ -19,7 +19,7 @@ See the TODO section in `README.md` for details. Brief status:
 - ✅ CLI skeleton with [cobra](https://github.com/spf13/cobra) (`main.go` root command)
 - ✅ pypi subcommand: `config` / `set <name>` / `list` / `unset` / `test`
 - ✅ goproxy subcommand: `config` / `set <name>` / `list` / `unset` / `test`
-- ✅ github subcommand: `convert` / `download` / `clone`
+- ✅ github subcommand: `convert` / `download` / `clone` (with `--proxy`) / `proxy list`
 - ✅ docker subcommand: `convert` / `pull` / `proxy list`
 - ✅ ubuntu subcommand: `config` / `set <name>` / `list` / `unset`
 - ✅ debian subcommand: `config` / `set <name>` / `list` / `unset` / `test`
@@ -52,7 +52,8 @@ mirrorctl/
     │   ├── goproxy.go   # goproxy subcommand implementation
     │   └── goproxy_test.go
     ├── github/
-    │   └── github.go    # github subcommand implementation (convert/download/clone)
+    │   ├── github.go    # github subcommand implementation (convert/download/clone)
+    │   └── proxies.go   # GitHub proxy table (gh-proxy main/org/v4/v6/fastly lines) + lookup/resolution
     ├── docker/
     │   ├── docker.go    # docker subcommand implementation (convert/pull/proxy)
     │   └── proxies.go   # Proxy table (gh-proxy lines + 1ms.run) and per-proxy rewriting
@@ -82,7 +83,8 @@ mirrorctl/
 | `internal/util/util.go`| Common utilities: `Die()` for fatal errors, `ExpandHome()` for `~` expansion, `ReadFile()` / `WriteFileAtomic()` and other general-purpose functions. |
 | `internal/pypi/pypi.go`| Implements pypi subcommand (config / set / list / unset / test). Maintains `Mirrors` slice, knows pip config file paths. Exposes `Command() *cobra.Command`. |
 | `internal/goproxy/goproxy.go`| Implements goproxy subcommand (config / set / list / unset / test). Manages GOPROXY via `go env -w`. |
-| `internal/github/github.go`| Implements github subcommand (convert / download / clone). Uses gh-proxy.com for GitHub URL acceleration. |
+| `internal/github/github.go`| Implements github subcommand (convert / download / clone). Uses gh-proxy.com for GitHub URL acceleration; all three actions accept `--proxy`. |
+| `internal/github/proxies.go`| `Proxies` table of GitHub acceleration proxies (gh-proxy main/org/v4/v6/Fastly lines) plus `LookupProxy` / `ResolveProxy`. Add a proxy by adding one row to the table. |
 | `internal/docker/docker.go`| Implements docker subcommand (convert / pull / proxy list). |
 | `internal/docker/proxies.go`| `Proxies` table of acceleration proxies (gh-proxy main/v4/v6/Fastly lines, 1ms.run) plus `LookupProxy` / `ResolveProxy` and per-proxy rewriting. Add a proxy by adding one row to the table. |
 | `internal/apt/apt.go`| Shared Debian/Ubuntu apt source management: distro detection, format detection (DEB822 vs traditional), domain replacement, backup/restore. |

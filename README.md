@@ -125,8 +125,26 @@ Uses `go env -w GOPROXY=<url>,direct` to set the proxy. Configuration is stored 
 | convert | `https://gh-proxy.com/...+URL`     | Convert GitHub URL to proxy URL          |
 | download| curl via proxy                     | Download files through proxy accelerator |
 | clone   | git clone via proxy                | Clone repos through proxy accelerator    |
+| proxy   | —                                  | List every supported proxy (`github proxy list`) |
 
-The proxy prefix `https://gh-proxy.com/` is prepended to GitHub URLs to route traffic through CDN-accelerated nodes, improving access speed in regions where GitHub is slow or unreliable.
+The proxy prefix (default: `https://gh-proxy.com/`) is prepended to GitHub URLs to route traffic through CDN-accelerated nodes, improving access speed in regions where GitHub is slow or unreliable.
+
+All three commands accept `--proxy <name>` to select the acceleration line
+(name or alias; a custom `https://...` prefix is also accepted):
+
+| name              | alias        | prefix                    | notes                        |
+|-------------------|--------------|---------------------------|------------------------------|
+| `gh-proxy` (default) | `ghproxy`, `main` | `https://gh-proxy.com/`   | main site, Cloudflare v4     |
+| `gh-proxy-org`    | `org`        | `https://gh-proxy.org/`   | main site alt domain         |
+| `gh-proxy-v4`     | `v4`         | `https://v4.gh-proxy.org/`| China-optimised node, recommended, IPv4 |
+| `gh-proxy-v6`     | `v6`         | `https://v6.gh-proxy.org/`| IPv4/IPv6 dual stack         |
+| `gh-proxy-fastly` | `fastly`, `cdn` | `https://cdn.gh-proxy.org/` | Fastly CDN                |
+
+```bash
+mirrorctl github convert --proxy v4 https://github.com/user/repo
+mirrorctl github download https://github.com/user/repo/archive/refs/heads/main.zip --proxy gh-proxy-fastly
+mirrorctl github clone user/repo --proxy v6
+```
 
 ### docker
 
@@ -216,7 +234,8 @@ mirrorctl/
 │       ├── goproxy.go      # goproxy subcommand implementation
 │       └── goproxy_test.go
 │   ├── github/
-│   │   └── github.go       # github subcommand implementation (convert/download/clone)
+│   │   ├── github.go       # github subcommand implementation (convert/download/clone)
+│   │   └── proxies.go      # GitHub proxy table (gh-proxy lines) + lookup/resolution
 │   ├── docker/
 │   │   ├── docker.go       # docker subcommand implementation (convert/pull/proxy)
 │   │   └── proxies.go      # Proxy table + per-proxy image reference rewriting
@@ -280,6 +299,8 @@ mirrorctl/
 - [x] `github convert <url>` — Convert GitHub URL to proxy URL
 - [x] `github download <url>` — Download files via proxy (curl)
 - [x] `github clone <url>` — Clone repos via proxy (git clone)
+- [x] `--proxy` — Select acceleration line for convert / download / clone (gh-proxy main / org / v4 / v6 / fastly, or custom prefix)
+- [x] `github proxy list` — List all supported proxies
 
 ### docker (Docker image proxy accelerator)
 - [x] `docker convert <image>` — Convert Docker image ref to proxy URL

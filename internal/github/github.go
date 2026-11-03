@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"text/tabwriter"
 	"time"
 
 	"github.com/bingym/mirrorctl/internal/util"
@@ -15,12 +16,9 @@ import (
 
 const maxRetries = 3
 
-// defaultProxy is the base URL for the GitHub acceleration proxy.
-const defaultProxy = "https://gh-proxy.com/"
-
-// proxyURL prepends the default proxy prefix to a raw GitHub URL.
-func proxyURL(raw string) string {
-	return defaultProxy + raw
+// proxyURL prepends the proxy prefix to a raw GitHub URL.
+func proxyURL(prefix, raw string) string {
+	return prefix + raw
 }
 
 // isGitHubURL reports whether raw looks like a GitHub-hosted URL.
@@ -32,10 +30,18 @@ func isGitHubURL(raw string) bool {
 }
 
 // convertURL transforms a GitHub URL (or shorthand) into a proxy-accelerated URL.
-// It accepts HTTPS URLs, git@ SSH URLs, and user/repo shorthand.
-func convertURL(raw string) (string, error) {
-	if strings.HasPrefix(raw, defaultProxy) {
-		return raw, nil
+// It accepts HTTPS URLs, git@ SSH URLs, and user/repo shorthand. An already
+// proxied URL is normalised: any known proxy prefix is stripped and replaced
+// with the selected prefix, so switching lines keeps a single clean prefix.
+func convertURL(raw, proxyName string) (string, error) {
+	p, err := ResolveProxy(proxyName)
+	if err != nil {
+		return "", err
+	}
+	prefix := p.Prefix
+
+	if known := knownPrefix(raw); known != "" {
+		return prefix + raw[len(known):], nil
 	}
 
 	raw = strings.TrimSpace(raw)
@@ -43,7 +49,7 @@ func convertURL(raw string) (string, error) {
 	// git@github.com:user/repo.git → https://github.com/user/repo.git
 	if strings.HasPrefix(raw, "git@github.com:") {
 		path := strings.TrimPrefix(raw, "git@github.com:")
-		return proxyURL("https://github.com/" + path), nil
+		return proxyURL(prefix, "https://github.com/"+path), nil
 	}
 
 	// user/repo shorthand (no protocol, single slash)
@@ -54,7 +60,7 @@ func convertURL(raw string) (string, error) {
 			if !strings.HasSuffix(raw, ".git") {
 				suffix = ".git"
 			}
-			return proxyURL("https://github.com/" + raw + suffix), nil
+			return proxyURL(prefix, "https://github.com/"+raw+suffix), nil
 		}
 	}
 
@@ -62,7 +68,7 @@ func convertURL(raw string) (string, error) {
 		return "", fmt.Errorf("not a supported GitHub URL: %s", raw)
 	}
 
-	return proxyURL(raw), nil
+	return proxyURL(prefix, raw), nil
 }
 
 // Command returns the cobra command for the "github" subcommand tree.
@@ -72,13 +78,25 @@ func Command() *cobra.Command {
 		Short: "Accelerate GitHub access via proxy (gh-proxy.com)",
 		Long: `Convert, download, and clone GitHub repositories through an acceleration proxy.
 
-The proxy prefix (https://gh-proxy.com/) is prepended to GitHub URLs to route
-traffic through CDN-accelerated nodes, improving access speed in regions where
-GitHub is slow or unreliable.`,
+The selected proxy prefix (default ` + DefaultProxyName + `: https://gh-proxy.com/) is
+prepended to GitHub URLs to route traffic through CDN-accelerated nodes,
+improving access speed in regions where GitHub is slow or unreliable.
+
+Available proxies (select with --proxy):
+  - gh-proxy (default): https://gh-proxy.com/        (main site, Cloudflare v4)
+  - gh-proxy-org:       https://gh-proxy.org/        (main site alt domain)
+  - gh-proxy-v4:        https://v4.gh-proxy.org/     (china-optimised, recommended)
+  - gh-proxy-v6:        https://v6.gh-proxy.org/     (IPv4/IPv6 dual stack)
+  - gh-proxy-fastly:    https://cdn.gh-proxy.org/    (Fastly CDN)
+
+A custom proxy prefix may also be passed, e.g. --proxy https://mirror.example.com/,
+which is prepended to GitHub URLs as-is.`,
 		Example: `  mirrorctl github convert https://github.com/user/repo
+  mirrorctl github convert --proxy v4 https://github.com/user/repo
   mirrorctl github download https://github.com/user/repo/releases/download/v1.0/file.tar.gz
+  mirrorctl github download --proxy gh-proxy-fastly https://github.com/user/repo/archive/refs/heads/main.zip
   mirrorctl github clone https://github.com/user/repo.git
-  mirrorctl github clone user/repo`,
+  mirrorctl github clone user/repo --proxy v6`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) > 0 {
 				fmt.Fprintf(os.Stderr, "unknown command %q for %q\n\n", args[0], cmd.CommandPath())
@@ -88,6 +106,29 @@ GitHub is slow or unreliable.`,
 			cmd.Help()
 		},
 	}
+
+	cmd.PersistentFlags().String("proxy", DefaultProxyName, "Proxy to use (name, alias, or custom https:// prefix)")
+
+	proxyCmd := &cobra.Command{
+		Use:   "proxy",
+		Short: "Inspect available GitHub acceleration proxies",
+		Run: func(cmd *cobra.Command, args []string) {
+			cmd.Help()
+		},
+	}
+	proxyCmd.AddCommand(&cobra.Command{
+		Use:   "list",
+		Short: "List all supported proxies",
+		Long: `List every supported acceleration proxy with its name, URL prefix,
+description and any network constraint.
+
+Names from the NAME column are valid values for --proxy.`,
+		Args: cobra.NoArgs,
+		Run: func(cmd *cobra.Command, args []string) {
+			os.Exit(cmdProxyList())
+		},
+	})
+	cmd.AddCommand(proxyCmd)
 
 	cmd.AddCommand(
 		&cobra.Command{
@@ -103,7 +144,8 @@ Supports:
 The converted URL is printed to stdout for use with any tool (wget, curl, git, etc.).`,
 			Args: cobra.ExactArgs(1),
 			Run: func(cmd *cobra.Command, args []string) {
-				os.Exit(cmdConvert(args[0]))
+				proxy, _ := cmd.Flags().GetString("proxy")
+				os.Exit(cmdConvert(args[0], proxy))
 			},
 		},
 		&cobra.Command{
@@ -113,7 +155,8 @@ The converted URL is printed to stdout for use with any tool (wget, curl, git, e
 through the proxy accelerator using curl.`,
 			Args: cobra.ExactArgs(1),
 			Run: func(cmd *cobra.Command, args []string) {
-				os.Exit(cmdDownload(args[0]))
+				proxy, _ := cmd.Flags().GetString("proxy")
+				os.Exit(cmdDownload(args[0], proxy))
 			},
 		},
 		&cobra.Command{
@@ -125,7 +168,8 @@ through the proxy accelerator using curl.`,
   - Shorthand:       user/repo`,
 			Args: cobra.ExactArgs(1),
 			Run: func(cmd *cobra.Command, args []string) {
-				os.Exit(cmdClone(args[0]))
+				proxy, _ := cmd.Flags().GetString("proxy")
+				os.Exit(cmdClone(args[0], proxy))
 			},
 		},
 	)
@@ -135,8 +179,8 @@ through the proxy accelerator using curl.`,
 
 // --- convert ---
 
-func cmdConvert(rawURL string) int {
-	proxy, err := convertURL(rawURL)
+func cmdConvert(rawURL, proxyName string) int {
+	proxy, err := convertURL(rawURL, proxyName)
 	if err != nil {
 		util.Warn("%v", err)
 		return 1
@@ -147,8 +191,8 @@ func cmdConvert(rawURL string) int {
 
 // --- download ---
 
-func cmdDownload(rawURL string) int {
-	proxy, err := convertURL(rawURL)
+func cmdDownload(rawURL, proxyName string) int {
+	proxy, err := convertURL(rawURL, proxyName)
 	if err != nil {
 		util.Warn("%v", err)
 		return 1
@@ -184,8 +228,8 @@ func cmdDownload(rawURL string) int {
 
 // --- clone ---
 
-func cmdClone(rawURL string) int {
-	proxy, err := convertURL(rawURL)
+func cmdClone(rawURL, proxyName string) int {
+	proxy, err := convertURL(rawURL, proxyName)
 	if err != nil {
 		util.Warn("%v", err)
 		return 1
@@ -204,5 +248,23 @@ func cmdClone(rawURL string) int {
 		util.Warn("clone failed: %v", err)
 		return 1
 	}
+	return 0
+}
+
+// --- proxy list ---
+
+func cmdProxyList() int {
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(w, "NAME\tALIAS\tPREFIX\tDESCRIPTION\tNET")
+	for _, p := range Proxies {
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", p.Name, strings.Join(p.Aliases, ", "), p.Prefix, p.Desc, p.Note)
+	}
+	if err := w.Flush(); err != nil {
+		util.Warn("write output: %v", err)
+		return 1
+	}
+
+	fmt.Printf("\nDefault: %s\n", DefaultProxyName)
+	fmt.Printf("Usage: github convert/download/clone <url> --proxy <name>, e.g. github clone user/repo --proxy v4\n")
 	return 0
 }
