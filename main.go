@@ -28,6 +28,14 @@ import (
 
 const version = "0.1.0"
 
+var versionCmd = &cobra.Command{
+	Use:   "version",
+	Short: "Print the version number of mirrorctl",
+	Run: func(cmd *cobra.Command, args []string) {
+		cmd.Printf("mirrorctl version %s\n", version)
+	},
+}
+
 var rootCmd = &cobra.Command{
 	Use:   "mirrorctl",
 	Short: "Switch package manager mirror sources",
@@ -41,6 +49,7 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
+	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(pypi.Command())
 	rootCmd.AddCommand(brew.Command())
 	rootCmd.AddCommand(goproxy.Command())
