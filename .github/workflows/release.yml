@@ -38,9 +38,17 @@ jobs:
           name: dist
           path: release-artifacts
 
+      - name: Package binaries
+        working-directory: release-artifacts
+        run: |
+          for f in mirrorctl-*; do
+            zip "${f%.exe}.zip" "$f"
+          done
+          rm mirrorctl-*
+
       - name: Generate checksums
         working-directory: release-artifacts
-        run: sha256sum mirrorctl-* > checksums.txt
+        run: sha256sum mirrorctl-*.zip > checksums.txt
 
       - name: Create release
         uses: softprops/action-gh-release@v2
